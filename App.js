@@ -1,32 +1,47 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, View } from 'react-native';
+
+import SplashScreen from './src/components/SplashScreen';
+import LoginScreen from './src/screens/Login/LoginScreen';
+import HomeScreen from './src/screens/Home/HomeScreen';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { useAuth } from './src/hooks/useAuth';
+import { colors } from './src/theme/colors';
+
+function AppContent() {
+  const [showSplash, setShowSplash] = useState(true);
+  const { status } = useAuth();
+
+  const handleSplashFinish = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
+  if (showSplash || status === 'hydrating') {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
+
+  if (status === 'authenticated') {
+    return <HomeScreen />;
+  }
+
+  return <LoginScreen />;
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <StatusBar style="auto" />
-      <Text style={styles.title}>Playlist Metronome</Text>
-      <Text style={styles.subtitle}>Base del proyecto lista</Text>
-    </View>
+    <AuthProvider>
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        <AppContent />
+      </View>
+    </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1E50A0',
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666666',
+    backgroundColor: colors.background,
   },
 });
