@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/colors';
 
@@ -12,8 +13,10 @@ export const TABS = [
 ];
 
 export default function BottomTabBar({ activeTab, onTabChange }) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.nav}>
+    <View style={[styles.nav, { paddingBottom: Math.max(insets.bottom, 8), height: 56 + Math.max(insets.bottom, 8) }]}>
       {TABS.map((tab) => {
         const isActive = tab.key === activeTab;
         const Icon = tab.iconSet;
@@ -45,8 +48,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    height: 64,
-    paddingBottom: 8,
     backgroundColor: colors.surfaceContainerLowest,
     borderTopWidth: 1,
     borderTopColor: colors.outlineVariant,

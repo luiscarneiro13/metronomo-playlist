@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import SplashScreen from './src/components/SplashScreen';
 import LoginScreen from './src/screens/Login/LoginScreen';
@@ -30,12 +31,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <View style={styles.root}>
-        <StatusBar style="light" />
-        <AppContent />
-      </View>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <View style={styles.root}>
+          <StatusBar style="light" />
+          <AppContent />
+        </View>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

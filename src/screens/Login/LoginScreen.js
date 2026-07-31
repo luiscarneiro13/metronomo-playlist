@@ -120,7 +120,7 @@ export default function LoginScreen() {
           <Text style={styles.title}>
             METRÓNOMO <Text style={styles.titleAccent}>PLAYLIST</Text>
           </Text>
-          <Text style={styles.subtitle}>Precision Timing System</Text>
+          <Text style={styles.subtitle}>Por Luis Carneiro</Text>
         </View>
 
         <Animated.View style={[styles.card, { shadowOpacity }]}>

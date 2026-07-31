@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { setAuthToken } from '../api/client';
+import { setAuthToken, setSessionExpiredHandler } from '../api/client';
 import * as authService from '../services/authService';
 import { getItem, removeItem, setItem } from '../utils/secureStorage';
 
@@ -12,6 +12,17 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState('hydrating'); // hydrating | authenticated | unauthenticated
+
+  const clearSession = useCallback(async () => {
+    setAuthToken(null);
+    await Promise.all([removeItem(TOKEN_KEY), removeItem(USER_KEY)]);
+    setUser(null);
+    setStatus('unauthenticated');
+  }, []);
+
+  useEffect(() => {
+    setSessionExpiredHandler(clearSession);
+  }, [clearSession]);
 
   useEffect(() => {
     (async () => {
@@ -45,11 +56,8 @@ export function AuthProvider({ children }) {
       // La sesión local se limpia igual aunque falle la llamada al servidor.
     }
 
-    setAuthToken(null);
-    await Promise.all([removeItem(TOKEN_KEY), removeItem(USER_KEY)]);
-    setUser(null);
-    setStatus('unauthenticated');
-  }, []);
+    await clearSession();
+  }, [clearSession]);
 
   const value = useMemo(() => ({ user, status, login, logout }), [user, status, login, logout]);
 
