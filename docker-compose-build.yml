@@ -1,0 +1,42 @@
+# =========================================================================
+# Docker Compose de Compilación - Playlist Metronome
+#
+# Por ahora solo trae el servicio ad-hoc "expo" (Android SDK disponible,
+# npm install limpio en cada run) para builds/pruebas puntuales con
+# `docker compose -f docker-compose-build.yml run --rm expo sh -c "..."`.
+#
+# El pipeline completo de producción (tests -> validate:build -> bump
+# de versión -> `eas build --local`, como el que existe en ironflow-app)
+# se puede agregar acá como servicio "build-aab" bajo un profile "build"
+# cuando el proyecto tenga tests (jest) y eas.json configurados.
+# =========================================================================
+
+services:
+  expo:
+    build:
+      context: .
+      dockerfile: Dockerfilebuild
+
+    container_name: playlist-metronome-build
+
+    network_mode: host
+
+    environment:
+      NODE_ENV: production
+      APP_VARIANT: production
+      EXPO_TOKEN: ${EXPO_TOKEN}
+
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+
+    working_dir: /app
+
+    command: >
+      sh -c "
+      npm install &&
+      npx expo start --host lan --clear
+      "
+
+volumes:
+  node_modules:
