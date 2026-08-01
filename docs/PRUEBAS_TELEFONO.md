@@ -48,12 +48,13 @@ docker compose -f docker-compose-build.yml build expo
 
 ```bash
 # Compilar la APK localmente (todo en una sola línea)
-docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && eas build --platform android --profile development --local"
+docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && npm install -g eas-cli && eas build --platform android --profile development --local"
 ```
 
 > ⚠️ El comando debe copiarse y ejecutarse **completo en una sola línea**. Si lo cortas y ejecutas solo la primera parte, el contenedor arranca el servidor de desarrollo con QR en lugar de compilar.
 
 - `--local` indica que el build corre en tu máquina, no en EAS Cloud
+- `npm install -g eas-cli` actualiza el CLI dentro del contenedor porque la imagen base trae una versión vieja que no cumple el mínimo exigido por `eas.json` (`>= 19.0.8`); hay que reinstalarlo en cada `run` porque el contenedor se recrea desde cero
 - Tarda entre 15 y 30 minutos según los recursos de tu PC (necesita al menos 8 GB de RAM y 15 GB de disco)
 - Al terminar, la terminal muestra la ruta exacta donde quedó la APK (generalmente en la raíz del proyecto)
 - **No necesitas descargar nada** — la APK ya está en tu PC, pasa directamente al Paso 4
@@ -158,7 +159,7 @@ docker compose -f docker-compose-build.yml build expo
 
 ```bash
 # Compilar la APK localmente (todo en una sola línea)
-docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && eas build --platform android --profile preview --local"
+docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && npm install -g eas-cli && eas build --platform android --profile preview --local"
 ```
 
 - `eas.json` fija `"android": { "buildType": "apk" }` en el perfil `preview`, así que el resultado es siempre un `.apk` release, nunca `.aab` ni un build de depuración
@@ -174,7 +175,7 @@ docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && e
 |-----------|---------|
 | APK de desarrollo (con hot reload) | `docker compose exec expo eas build --platform android --profile development` |
 | APK standalone para testing (EAS Cloud, package `.dev`) | `docker compose exec expo eas build --platform android --profile preview` |
-| APK release local (Docker, package producción) | `docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && eas build --platform android --profile preview --local"` |
+| APK release local (Docker, package producción) | `docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && npm install -g eas-cli && eas build --platform android --profile preview --local"` |
 | AAB para Google Play | `docker compose exec expo eas build --platform android --profile production` |
 | Ver todos los builds | `docker compose exec expo eas build:list` |
 | Iniciar Metro por WiFi | `docker compose exec expo npx expo start --dev-client --host lan --clear` |
