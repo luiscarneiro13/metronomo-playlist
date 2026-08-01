@@ -38,7 +38,7 @@ services:
 
     command: >
       sh -c "
-      [ -d node_modules/react ] || npm install --legacy-peer-deps &&
+      npm install --legacy-peer-deps &&
       npx expo start --host lan --clear
       "
 

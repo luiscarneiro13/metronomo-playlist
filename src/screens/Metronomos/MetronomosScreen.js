@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -16,6 +16,12 @@ import { JetBrainsMono_500Medium, JetBrainsMono_700Bold } from '@expo-google-fon
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { listMetronomes } from '../../services/metronomesService';
+import { withCacheFallback } from '../../services/offlineFallback';
+import CreateMetronomeScreen from './CreateMetronomeScreen';
+import MetronomeDetailScreen from './MetronomeDetailScreen';
+import { useSettings } from '../../hooks/useSettings';
+import { useSync } from '../../hooks/useSync';
+import { createMetronomeEngine } from '../../utils/audioEngine';
 import { colors } from '../../theme/colors';
 
 const FONTS = {
@@ -26,15 +32,23 @@ const FONTS = {
   labelBold: 'JetBrainsMono_700Bold',
 };
 
-function MetronomeItem({ item }) {
+function MetronomeItem({ item, onPress, isPlaying, onTogglePlay, isAvailableOffline }) {
   return (
-    <View style={styles.item}>
+    <Pressable
+      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+      onPress={onPress}
+    >
       <View style={styles.itemLeft}>
         <View style={[styles.bar, item.has_metronome ? styles.barActive : styles.barInactive]} />
         <View style={styles.itemText}>
-          <Text style={styles.itemTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
+          <View style={styles.itemTitleRow}>
+            <Text style={styles.itemTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {isAvailableOffline ? (
+              <MaterialIcons name="offline-pin" size={14} color={colors.outline} />
+            ) : null}
+          </View>
           {item.artist ? (
             <Text style={styles.itemArtist} numberOfLines={1}>
               {item.artist}
@@ -50,8 +64,16 @@ function MetronomeItem({ item }) {
               <Text style={styles.bpmValue}>{item.bpm}</Text>
               <Text style={styles.bpmLabel}>BPM</Text>
             </View>
-            <Pressable style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}>
-              <MaterialIcons name="play-arrow" size={24} color={colors.primaryFixedDim} />
+            <Pressable
+              style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
+              onPress={onTogglePlay}
+              hitSlop={8}
+            >
+              <MaterialIcons
+                name={isPlaying ? 'stop' : 'play-arrow'}
+                size={24}
+                color={colors.primaryFixedDim}
+              />
             </Pressable>
           </>
         ) : (
@@ -63,7 +85,7 @@ function MetronomeItem({ item }) {
           </>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -76,21 +98,65 @@ export default function MetronomosScreen() {
     JetBrainsMono_700Bold,
   });
 
+  const { beepSoundId } = useSettings();
+  const { isOnline, metronomeIds } = useSync();
+
   const [metronomes, setMetronomes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [query, setQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [selectedMetronome, setSelectedMetronome] = useState(null);
+  const [playingId, setPlayingId] = useState(null);
+
+  const engineRef = useRef(null);
+
+  useEffect(() => {
+    const engine = createMetronomeEngine();
+    engine.setSound(beepSoundId);
+    engineRef.current = engine;
+
+    return () => {
+      engine.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    engineRef.current?.setSound(beepSoundId);
+  }, [beepSoundId]);
+
+  const stopMetronome = useCallback(() => {
+    engineRef.current?.stop();
+    setPlayingId(null);
+  }, []);
+
+  const handleTogglePlay = useCallback(
+    (item) => {
+      if (playingId === item.id) {
+        stopMetronome();
+        return;
+      }
+
+      setPlayingId(item.id);
+      engineRef.current?.start(item.bpm);
+    },
+    [playingId, stopMetronome]
+  );
+
+  useEffect(() => {
+    return () => stopMetronome();
+  }, [selectedMetronome, isCreating, stopMetronome]);
 
   const fetchMetronomes = useCallback(async () => {
     setErrorMessage(null);
     try {
-      const data = await listMetronomes();
+      const { data } = await withCacheFallback('metronomes', listMetronomes, { isOnline });
       setMetronomes(data);
     } catch (error) {
       setErrorMessage(error.message);
     }
-  }, []);
+  }, [isOnline]);
 
   useEffect(() => {
     (async () => {
@@ -120,6 +186,35 @@ export default function MetronomosScreen() {
 
   if (!fontsLoaded) {
     return <View style={styles.container} />;
+  }
+
+  if (selectedMetronome) {
+    return (
+      <MetronomeDetailScreen
+        metronome={selectedMetronome}
+        onBack={() => setSelectedMetronome(null)}
+        onUpdated={() => {
+          setSelectedMetronome(null);
+          fetchMetronomes();
+        }}
+        onDeleted={() => {
+          setSelectedMetronome(null);
+          fetchMetronomes();
+        }}
+      />
+    );
+  }
+
+  if (isCreating) {
+    return (
+      <CreateMetronomeScreen
+        onBack={() => setIsCreating(false)}
+        onCreated={() => {
+          setIsCreating(false);
+          fetchMetronomes();
+        }}
+      />
+    );
   }
 
   return (
@@ -153,7 +248,15 @@ export default function MetronomosScreen() {
         <FlatList
           data={filteredMetronomes}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <MetronomeItem item={item} />}
+          renderItem={({ item }) => (
+            <MetronomeItem
+              item={item}
+              onPress={() => setSelectedMetronome(item)}
+              isPlaying={playingId === item.id}
+              onTogglePlay={() => handleTogglePlay(item)}
+              isAvailableOffline={metronomeIds.has(item.id)}
+            />
+          )}
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           refreshControl={
@@ -171,7 +274,10 @@ export default function MetronomosScreen() {
         />
       )}
 
-      <Pressable style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
+      <Pressable
+        style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+        onPress={() => setIsCreating(true)}
+      >
         <MaterialIcons name="add" size={24} color={colors.onPrimaryContainer} />
       </Pressable>
     </View>
@@ -233,6 +339,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
+  itemPressed: {
+    backgroundColor: colors.surfaceVariant,
+  },
   itemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -254,7 +363,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: 2,
   },
+  itemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   itemTitle: {
+    flexShrink: 1,
     fontFamily: FONTS.bodyMedium,
     fontSize: 15,
     color: colors.onSurface,

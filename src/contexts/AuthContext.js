@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useEffect, useMemo, useState } from 
 
 import { setAuthToken, setSessionExpiredHandler } from '../api/client';
 import * as authService from '../services/authService';
+import { clearCache } from '../utils/localCache';
 import { getItem, removeItem, setItem } from '../utils/secureStorage';
 
 const TOKEN_KEY = 'auth_token';
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
   const clearSession = useCallback(async () => {
     setAuthToken(null);
     await Promise.all([removeItem(TOKEN_KEY), removeItem(USER_KEY)]);
+    clearCache();
     setUser(null);
     setStatus('unauthenticated');
   }, []);

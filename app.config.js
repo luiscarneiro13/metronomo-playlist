@@ -30,6 +30,15 @@ module.exports = {
     plugins: [
       'expo-font',
       'expo-secure-store',
+      'expo-asset',
+      [
+        'react-native-audio-api',
+        {
+          iosBackgroundMode: true,
+          androidPermissions: ['android.permission.MODIFY_AUDIO_SETTINGS'],
+          androidForegroundService: false,
+        },
+      ],
       [
         'expo-splash-screen',
         {
@@ -40,5 +49,10 @@ module.exports = {
         },
       ],
     ],
+    extra: {
+      eas: {
+        projectId: '94da3aa2-85cc-42c3-ab83-ebf072616c47',
+      },
+    },
   },
 };

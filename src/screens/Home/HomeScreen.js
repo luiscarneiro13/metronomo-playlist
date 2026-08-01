@@ -8,6 +8,7 @@ import MetronomosScreen from '../Metronomos/MetronomosScreen';
 import PlaylistsScreen from '../Playlists/PlaylistsScreen';
 import PracticaScreen from '../Practica/PracticaScreen';
 import PerfilScreen from '../Perfil/PerfilScreen';
+import SyncBanner from '../../components/SyncBanner';
 import { colors } from '../../theme/colors';
 
 const SCREENS = {
@@ -28,6 +29,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <SyncBanner />
       <View style={styles.content}>
         <ActiveScreen />
       </View>

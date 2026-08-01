@@ -136,14 +136,35 @@ Eso es todo — Metro arranca automáticamente. Abre la app en el teléfono; si 
 
 Una APK que funciona sola sin necesidad de correr Metro. Cada cambio de código requiere un nuevo build completo.
 
+#### Alternativa 1: EAS Cloud
+
 ```bash
 docker compose up -d
 docker compose exec expo eas build --platform android --profile preview
 ```
 
-- El perfil `preview` genera un APK autónomo (también con package `.dev`) que no necesita Metro corriendo
+- El perfil `preview` genera un APK autónomo (con package `.dev`, porque `docker-compose.yml` fija `APP_VARIANT: development`) que no necesita Metro corriendo
 - Descárgalo e instálalo siguiendo los pasos 3 y 4 de la Opción A
 - **Desventaja:** cada cambio de código requiere esperar otro build de 10–20 minutos
+
+#### Alternativa 2: Build local con Docker (APK release, sin subir nada a EAS)
+
+Usa el contenedor de build (`Dockerfilebuild`), igual que en la Opción A pero con el perfil `preview`:
+
+```bash
+# Solo la primera vez: construir la imagen de build (tarda varios minutos)
+docker compose -f docker-compose-build.yml build expo
+```
+
+```bash
+# Compilar la APK localmente (todo en una sola línea)
+docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && eas build --platform android --profile preview --local"
+```
+
+- `eas.json` fija `"android": { "buildType": "apk" }` en el perfil `preview`, así que el resultado es siempre un `.apk` release, nunca `.aab` ni un build de depuración
+- `docker-compose-build.yml` fija `APP_VARIANT: production`, así que a diferencia de la Alternativa 1, esta APK usa el package de **producción** (`com.metronomoplaylist`), no el `.dev`
+- Tarda entre 15 y 30 minutos según los recursos de tu PC (necesita al menos 8 GB de RAM y 15 GB de disco)
+- Al terminar, la terminal muestra la ruta exacta donde quedó la APK — pasa directo al Paso 4
 
 ---
 
@@ -152,7 +173,8 @@ docker compose exec expo eas build --platform android --profile preview
 | Propósito | Comando |
 |-----------|---------|
 | APK de desarrollo (con hot reload) | `docker compose exec expo eas build --platform android --profile development` |
-| APK standalone para testing | `docker compose exec expo eas build --platform android --profile preview` |
+| APK standalone para testing (EAS Cloud, package `.dev`) | `docker compose exec expo eas build --platform android --profile preview` |
+| APK release local (Docker, package producción) | `docker compose -f docker-compose-build.yml run --rm expo sh -c "npm install && eas build --platform android --profile preview --local"` |
 | AAB para Google Play | `docker compose exec expo eas build --platform android --profile production` |
 | Ver todos los builds | `docker compose exec expo eas build:list` |
 | Iniciar Metro por WiFi | `docker compose exec expo npx expo start --dev-client --host lan --clear` |
